@@ -39,13 +39,7 @@ var ents = map[string]struct {
 	"os_release":     {"OS release", "", "PRETTY_NAME"},
 	"os_name":        {"OS name", "", "NAME"},
 	"os_version":     {"OS version", "", "VERSION"},
-}
-
-var unameEnts = map[string]string{
-	"machine":        "-m",
-	"kernel_name":    "-s",
-	"kernel_release": "-r",
-	"kernel_version": "-v",
+	"pkg_upgrades":   {"Upgradable packages", "", ""},
 }
 
 func newSystemInfo(cfg *config.Config) SyncCloser {
@@ -54,6 +48,7 @@ func newSystemInfo(cfg *config.Config) SyncCloser {
 	defCfg.Set("entities", []string{
 		"kernel_release",
 		"os_release",
+		"pkg_upgrades",
 	})
 	cfg.Append(defCfg)
 	period := cfg.MustGet("period").Duration()
@@ -87,6 +82,21 @@ func (s *SystemInfo) Config() []EntityConfig {
 
 func (s *SystemInfo) Publish() {
 	s.ps.Publish(s.topic, s.msg)
+}
+
+func aptListUpgradable() (int, error) {
+	cmd := exec.Command("apt", "-qq", "list", "--upgradeable")
+	output, err := cmd.Output()
+	if err != nil {
+		return 0, err
+	}
+	pkgCount := 0
+	for _, b := range output {
+		if b == '\n' {
+			pkgCount++
+		}
+	}
+	return pkgCount, nil
 }
 
 func osRelease() (map[string]string, error) {
@@ -132,6 +142,13 @@ func (s *SystemInfo) Refresh(forced bool) {
 			cmd := exec.Command("uname", uname_opt)
 			if v, err := cmd.Output(); err == nil {
 				s.values[e] = strings.TrimSpace(string(v))
+			} else {
+				delete(s.values, e)
+			}
+		}
+		if e == "pkg_upgrades" {
+			if v, err := aptListUpgradable(); err == nil {
+				s.values[e] = fmt.Sprint(v)
 			} else {
 				delete(s.values, e)
 			}
