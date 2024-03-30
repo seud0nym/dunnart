@@ -63,7 +63,9 @@ The basic steps:
 - customise dunnart.yaml
 - copy the **dunnart** binary and config to your target
 - run the daemon to check everything works
-- configure the init system to start the daemon - an example dunnart.service for systemd is provided.
+- configure the init system to start the daemon - an example dunnart.service for systemd is provided, as well as dunnart.sysv-init for older systems.
+
+If your configuration .yaml file has a different name or is in a different location to binary, you can specify it on the command line with the `-c` flag.
 
 ## Configuration
 
@@ -104,6 +106,8 @@ The **dunnart** defaults correspond to the default HA configuration, in which ca
 |discovery.node_id|The name of the device that the MQTT integration will add to HA and that the entities will be assigned to.|*hostname*|
 |discovery.mac_source|A list of interfaces to use to provide a unique MAC address to identify the device.  The first active listed interface is used.|[eth0, enp3s0, wlan0]|
 |discovery.status_delay|A period between publishing entity config and status to allow HA time to register new entities before receiving the entity status|15s|
+|discovery.manufacturer|The device manufacturer string to be included in the device discovery|None set|
+|discovery.manufacturer|The device model string to be included in the device discovery|None set|
 
 ### Modules
 
@@ -184,6 +188,7 @@ Supported entities:
 |period|The polling period for the system info sensors|6h|
 
 The info is drawn from `uname` and `/etc/os-release`.
+In addition, you can expose the count of upgradable `apt` packages.
 
 Supported entities:
 
@@ -195,6 +200,7 @@ Supported entities:
 - os_name (/etc/os-release NAME)
 - os_release (/etc/os-release PRETTY_NAME)
 - os_version (/etc/os-release/VERSION)
+- pkg_updates (apt -qq list --upgradable | wc -l)
 
 #### WAN
 
