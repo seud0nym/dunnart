@@ -262,6 +262,12 @@ func newDiscovery(cfg *config.Config, ss map[string]Syncer, baseTopic string) Di
 				"connections": [][]string{{"mac", mac}},
 			},
 		}
+		if manufacturer, err := cfg.Get("manufacturer"); err == nil {
+			baseCfg["device"].(map[string]interface{})["manufacturer"] = manufacturer.String()
+		}
+		if model, err := cfg.Get("model"); err == nil {
+			baseCfg["device"].(map[string]interface{})["model"] = model.String()
+		}
 		for modName, s := range ss {
 			if a, ok := s.(Discoverable); ok {
 				for _, entity := range a.Config() {
