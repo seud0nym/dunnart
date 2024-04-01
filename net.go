@@ -6,7 +6,7 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -168,7 +168,11 @@ func (n *NetIf) RefreshStats(forced bool) {
 	fields := []string{}
 	for _, gname := range statsGauges {
 		if n.statsEntities[gname] {
-			fields = append(fields, fmt.Sprintf(`"%s": %d`, gname, n.gauges[gname].value))
+			bytes := uint64(0)
+			if elapsed > 0 {
+				bytes = oldg[gname].delta(n.gauges[gname])
+			}
+			fields = append(fields, fmt.Sprintf(`"%s": %d`, gname, bytes))
 		}
 	}
 	for _, r := range statsRates {
@@ -185,7 +189,7 @@ func (n *NetIf) RefreshStats(forced bool) {
 }
 
 func (n *NetIf) read_status(fname string) string {
-	v, err := ioutil.ReadFile("/sys/class/net/" + n.name + "/" + fname)
+	v, err := os.ReadFile("/sys/class/net/" + n.name + "/" + fname)
 	if err == nil {
 		return strings.TrimSpace(string(v))
 	}
@@ -195,7 +199,7 @@ func (n *NetIf) read_status(fname string) string {
 func (n *NetIf) read_gauge(gname string) Gauge {
 	g := Gauge{}
 	fname := "/sys/class/net/" + n.name + "/statistics/" + gname
-	v, err := ioutil.ReadFile(fname)
+	v, err := os.ReadFile(fname)
 	if err == nil {
 		v, err := strconv.ParseUint(strings.TrimSpace(string(v)), 10, 64)
 		if err == nil {
