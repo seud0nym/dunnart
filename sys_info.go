@@ -48,7 +48,6 @@ func newSystemInfo(cfg *config.Config) SyncCloser {
 	defCfg.Set("entities", []string{
 		"kernel_release",
 		"os_release",
-		"pkg_upgrades",
 	})
 	cfg.Append(defCfg)
 	period := cfg.MustGet("period").Duration()
