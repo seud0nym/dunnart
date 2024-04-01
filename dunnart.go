@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/signal"
@@ -305,7 +304,7 @@ func (d *Discovery) advertise(mc mqtt.Client) {
 func get_mac(cfg *config.Config) (string, error) {
 	ss := cfg.MustGet("mac_source").StringSlice()
 	for _, source := range ss {
-		v, err := ioutil.ReadFile(fmt.Sprintf("/sys/class/net/%s/address", source))
+		v, err := os.ReadFile(fmt.Sprintf("/sys/class/net/%s/address", source))
 		if err == nil {
 			return strings.TrimSpace(string(v)), nil
 		}
