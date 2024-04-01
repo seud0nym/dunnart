@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"os/signal"
 	"strings"
 	"syscall"
@@ -243,6 +244,21 @@ type Discovery struct {
 	ents map[string]string
 }
 
+func applyDeviceValue(cfg *config.Config, key string, baseCfg map[string]interface{}) {
+	if v, err := cfg.Get(key); err == nil {
+		typeofv := fmt.Sprintf("%T", v.Value())
+		if typeofv == "string" {
+			baseCfg["device"].(map[string]interface{})[key] = v.String()
+		} else if typeofv == "[]interface {}" {
+			args := strings.Join(v.StringSlice(), " ")
+			cmd := exec.Command("sh", "-c", args)
+			if result, err := cmd.Output(); err == nil {
+				baseCfg["device"].(map[string]interface{})[key] = strings.TrimSpace(string(result[:]))
+			}
+		}
+	}
+}
+
 func newDiscovery(cfg *config.Config, ss map[string]Syncer, baseTopic string) Discovery {
 	ents := map[string]string{}
 	prefix := cfg.MustGet("prefix").String()
@@ -261,12 +277,9 @@ func newDiscovery(cfg *config.Config, ss map[string]Syncer, baseTopic string) Di
 				"connections": [][]string{{"mac", mac}},
 			},
 		}
-		if manufacturer, err := cfg.Get("manufacturer"); err == nil {
-			baseCfg["device"].(map[string]interface{})["manufacturer"] = manufacturer.String()
-		}
-		if model, err := cfg.Get("model"); err == nil {
-			baseCfg["device"].(map[string]interface{})["model"] = model.String()
-		}
+		applyDeviceValue(cfg, "manufacturer", baseCfg)
+		applyDeviceValue(cfg, "model", baseCfg)
+		applyDeviceValue(cfg, "sw_version", baseCfg)
 		for modName, s := range ss {
 			if a, ok := s.(Discoverable); ok {
 				for _, entity := range a.Config() {
