@@ -79,8 +79,12 @@ func memStats(fields map[string]bool) (MemStats, error) {
 	if fields["ram_used_percent"] && stats[0] != 0 && stats[1] != 0 {
 		ms["ram_used_percent"] = float32(((stats[0]-stats[1])*10000)/stats[0]) / 100
 	}
-	if fields["swap_used_percent"] && stats[2] != 0 {
-		ms["swap_used_percent"] = float32(((stats[2]-stats[3])*10000)/stats[2]) / 100
+	if fields["swap_used_percent"] {
+		if stats[2] != 0 {
+			ms["swap_used_percent"] = float32(((stats[2]-stats[3])*10000)/stats[2]) / 100
+		} else {
+			ms["swap_used_percent"] = 0
+		}
 	}
 
 	return ms, nil
