@@ -7,6 +7,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"sort"
@@ -84,15 +85,52 @@ func (s *SystemInfo) Publish() {
 }
 
 func aptListUpgradable() (int, error) {
-	cmd := exec.Command("apt", "-qq", "list", "--upgradeable")
-	output, err := cmd.Output()
+	var held []string
+	cmd := exec.Command("apt-mark", "-qq", "showhold")
+	stdout, err := cmd.StdoutPipe()
+	if err == nil {
+		if err = cmd.Start(); err == nil {
+			scanner := bufio.NewScanner(stdout)
+			for scanner.Scan() {
+				held = append(held, scanner.Text())
+				log.Printf("apt-mark hold %s", held)
+			}
+			if err = scanner.Err(); err == nil {
+				if err = cmd.Wait(); err != nil {
+					log.Printf("Failed to wait for apt-mark to complete: %s", err)
+				}
+			} else {
+				log.Printf("Failed to start apt-mark scanner: %s", err)
+			}
+		} else {
+			log.Printf("Failed to start apt-mark command: %s", err)
+		}
+	} else {
+		log.Printf("Failed to acquire apt-mark StdoutPipe: %s", err)
+	}
+	cmd = exec.Command("apt", "-qq", "list", "--upgradeable")
+	stdout, err = cmd.StdoutPipe()
 	if err != nil {
 		return 0, err
 	}
 	pkgCount := 0
-	for _, b := range output {
-		if b == '\n' {
+	if err = cmd.Start(); err == nil {
+		scanner := bufio.NewScanner(stdout)
+		for scanner.Scan() {
 			pkgCount++
+			upgradeable := scanner.Text()
+			for _, onhold := range held {
+				if strings.Contains(upgradeable, onhold) {
+					pkgCount--
+					break
+				}
+			}
+		}
+		if err = scanner.Err(); err != nil {
+			return 0, err
+		}
+		if err = cmd.Wait(); err != nil {
+			return 0, err
 		}
 	}
 	return pkgCount, nil
